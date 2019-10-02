@@ -172,7 +172,7 @@ task configVMNetworkIP {
 
         if ($Config.virtualMachines[$i].guestOS -eq 'Windows') {
             $TestInterfaceMAC = ((Get-NetworkAdapter -VM $($Clone.Name) | Select-Object -first 1).MacAddress).ToLower() -replace ":","-"
-            $splat = @{
+            $run = @{
                 ScriptText      = 'Get-NetAdapter | where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue;`
                                 Get-NetAdapter | where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Get-NetIPAddress | Remove-NetIPAddress -confirm:$false;`
                                 Get-NetAdapter | where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | `
@@ -182,7 +182,7 @@ task configVMNetworkIP {
                 VM              = $Clone.Name
                 GuestCredential = $vmCredentials
             }
-            $output = Invoke-VMScript @splat -ErrorAction Stop
+            $output = Invoke-VMScript @run -ErrorAction Stop
             $run = @{
                 ScriptText      = '(Get-NetAdapter| where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Get-NetIPAddress -AddressFamily IPv4).IPAddress'
                 ScriptType      = 'PowerShell'
