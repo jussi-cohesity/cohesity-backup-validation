@@ -72,16 +72,16 @@ This file contains information about virtual machines being tested and tests run
 
 ### identity xml files
 
-Identity XML files are not included here. They can be created with [createCredentials.ps1](https://github.com/gobbe/cohesity-scripts/blob/master/cohesity-backup-validation/createCredentials.ps1) file.
+Identity XML files are not included here. They can be created with [createCredentials.ps1](https://github.com/jussi-cohesity/cohesity-backup-validation/blob/master/createCredentials.ps1) file. This example script creates only one identity file for guests, but if you need multiple create additional by using same commands.
 
-_Note: Secure XML files can only be decrypted by the user account that created them._
+Note: Secure XML files can only be decrypted by the user account that created them.
 
 ## Usage
 
 After creation of environment.json, config.json and required identity xml files you can run cohesity-backup-validation.ps1 to automate testing.
 
 
-# :pushpin: Notes
+# Notes
 This is not an official Cohesity repository. Cohesity Inc. is not affiliated with the posted examples in any way.
 
 ```
