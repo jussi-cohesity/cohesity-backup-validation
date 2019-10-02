@@ -113,12 +113,25 @@ task checkPSScriptExecution {
         $loopCount = 1
         while ($true) {
             Write-Host "Run try ($loopCount)/5: Script test on $($Clone.name)" -ForegroundColor Yellow
-            $vmscript = @{
-                ScriptText      = 'hostname'
-                ScriptType      = 'PowerShell'
-                VM              = $Clone.name
-                GuestCredential = $vmCredentials
+
+            if ($Config.virtualMachines[$i].guestOS -eq 'Windows') {
+                $vmscript = @{
+                    ScriptText      = 'hostname'
+                    ScriptType      = 'PowerShell'
+                    VM              = $Clone.name
+                    GuestCredential = $vmCredentials
+                }
             }
+            
+            if ($Config.virtualMachines[$i].guestOS -eq 'Linux') {
+                $vmscript = @{
+                    ScriptText      = 'hostname'
+                    ScriptType      = 'bash'
+                    VM              = $Clone.name
+                    GuestCredential = $vmCredentials
+                }
+            }
+
             try {
                 $results = Invoke-VMScript @vmscript -ErrorAction Stop
                 Write-Host "checkPSScriptExecution status $results" -ForegroundColor Yellow
@@ -179,7 +192,12 @@ task configVMNetworkIP {
         } 
 
         if ($Config.guestOS -eq 'Linux')  {
-            
+            $run = @{
+                ScriptText      = 'ifconfig "' + $($Config.virtualMachines[$i].linuxNetDev) + '" "' + $($Config.virtualMachines[$i].testIp) + '"/"' + $($Config.virtualMachines[$i].testSubnet) + '" up && route add default gw "' + $Config.virtualMachines[$i].testGateway + '" ' 
+                ScriptType      = 'bash'
+                VM              = $Clone.Name
+                GuestCredential = $vmCredentials
+            } 
         }
 
         if (!$run) { 
@@ -188,13 +206,6 @@ task configVMNetworkIP {
         }
 
         $output = Invoke-VMScript @run -ErrorAction Stop
-        $new_ip = $output.ScriptOutput -replace "`r`n", ""
-        if ( $new_ip -eq $Config.virtualMachines[$i].testIp ) {
-            Write-Host "$($Clone.Name): Network IP changed to $($new_ip)" -ForegroundColor Yellow
-        }
-        else {
-            throw "$($Clone.Name): Network IP change to $($Config.virtualMachines[$i].testIp) failed. Failing tests. Cloned VMs remain cloned status, manual cleanup might needed!"
-        }
         $i++
     }
 }
