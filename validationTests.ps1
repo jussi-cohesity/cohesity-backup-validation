@@ -46,7 +46,7 @@ task getWindowsServicesStatus {
     Write-Host "$vmName service status: $results"
 }
 
-task getLinuxServiceStatus {
+task getLinuxServicesStatus {
     $run = @{
         ScriptText      = 'service --status-all'
         ScriptType      = 'bash'
