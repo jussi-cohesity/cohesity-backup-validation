@@ -41,7 +41,7 @@ This file contains information about virtual machines being tested and tests run
 ```PowerShell
 {
     "virtualMachines": [
-{
+        {
             "name": "Win2012",
             "guestOS": "Windows",
             "backupJobName": "VM_Job",
