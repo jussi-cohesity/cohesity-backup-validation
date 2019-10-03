@@ -216,7 +216,10 @@ task validationTests {
 task removeClones {
     foreach ($Clone in $CloneArray) {
         $removeRequest = Remove-CohesityClone -TaskId $Clone.id -Confirm:$false
-        Write-Host "$($Clone.Name): $removeRequest"
+        Write-Host "$($Clone.Name): $removeRequest" -ForegroundColor Yellow
+
+        $removeView = Remove-CohesityView -Name $Clone.name -Confirm:$false
+        Write-Host "Removing view $($Clone.name)" -ForegroundColor Yellow
     }
 }
 
