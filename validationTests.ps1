@@ -24,38 +24,50 @@ task Ping {
 }
 
 task MySQLStatus {
-    $run = @{
-        VM              = $vmName
-        GuestCredential = $vmCredentials
-        ScriptType        = 'bash'
-        ScriptText      = "service mysqld status"
+    if ($Config.guestOS -eq 'Linux') {
+        $run = @{
+            VM              = $vmName
+            GuestCredential = $vmCredentials
+            ScriptType        = 'bash'
+            ScriptText      = "service mysqld status"
+        }
+        $results = Invoke-VMScript @run
+        Write-Host "$vmName MySQL Status: $results"
+    } else {
+        Write-Host "Task is not compatible with OS type $($Config.guestOS)" -ForegroundColor Red
     }
-    $results = Invoke-VMScript @run
-    Write-Host "$vmName MySQL Status: $results"
 }
 
 task getWindowsServicesStatus {
-    $run = @{
-        ScriptText      = 'Get-Service'
-        ScriptType      = 'PowerShell'
-        VM              = $vmName
-        GuestCredential = $vmCredentials
-    }
-    $results = Invoke-VMScript @run -ErrorAction Stop
+    if ($Config.guestOS -eq 'Windows') {
+        $run = @{
+            ScriptText      = 'Get-Service'
+            ScriptType      = 'PowerShell'
+            VM              = $vmName
+            GuestCredential = $vmCredentials
+        }
+        $results = Invoke-VMScript @run -ErrorAction Stop
 
-    Write-Host "$vmName service status: $results"
+        Write-Host "$vmName service status: $results"
+    } else {
+        Write-Host "Task is not compatible with OS type $($Config.guestOS)" -ForegroundColor Red
+    }
 }
 
 task getLinuxServicesStatus {
-    $run = @{
-        ScriptText      = 'service --status-all'
-        ScriptType      = 'bash'
-        VM              = $vmName
-        GuestCredential = $vmCredentials
-    }
-    $results = Invoke-VMScript @run -ErrorAction Stop
+    if ($Config.guestOS -eq 'Linux') {
+        $run = @{
+            ScriptText      = 'service --status-all'
+            ScriptType      = 'bash'
+            VM              = $vmName
+            GuestCredential = $vmCredentials
+        }
+        $results = Invoke-VMScript @run -ErrorAction Stop
 
-    Write-Host "$vmName service status: $results"
+        Write-Host "$vmName service status: $results"
+    } else {
+        Write-Host "Task is not compatible with OS type $($Config.guestOS)" -ForegroundColor Red
+    }
 }
 
 task .
