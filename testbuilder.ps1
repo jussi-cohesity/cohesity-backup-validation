@@ -182,25 +182,15 @@ task configVMNetworkIP {
                 VM              = $Clone.Name
                 GuestCredential = $vmCredentials
             }
-            $output = Invoke-VMScript @run -ErrorAction Stop
-            $run = @{
-                ScriptText      = '(Get-NetAdapter| where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Get-NetIPAddress -AddressFamily IPv4).IPAddress'
-                ScriptType      = 'PowerShell'
-                VM              = $Clone.Name
-                GuestCredential = $vmCredentials
-            }
-        } 
-
-        if ($Config.guestOS -eq 'Linux')  {
+         
+        } elseif ($Config.virtualMachines[$i].guestOS -eq 'Linux')  {
             $run = @{
                 ScriptText      = 'ifconfig "' + $($Config.virtualMachines[$i].linuxNetDev) + '" "' + $($Config.virtualMachines[$i].testIp) + '"/"' + $($Config.virtualMachines[$i].testSubnet) + '" up && route add default gw "' + $Config.virtualMachines[$i].testGateway + '" ' 
                 ScriptType      = 'bash'
                 VM              = $Clone.Name
                 GuestCredential = $vmCredentials
             } 
-        }
-
-        if (!$run) { 
+        } else { 
             Write-Host "$($Clone.Name): Network IP change to $($Config.virtualMachines[$i].testIp) failed. GuestOS $($Config.virtualMachines[$i].guestOS) is not supported (Windows/Linux). Cloned VMs remain cloned status, manual cleanup might needed!" -ForegroundColor Red
             exit
         }
