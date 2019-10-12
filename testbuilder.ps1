@@ -41,7 +41,7 @@ task connectVMware {
 }
 
 ### Create a clone task for virtual machine(s)
-task createCloneTask {
+task startCloneTask {
 
     if (!$Environment.vmwareServer) { throw "Clone task failed. VMware Server is not defined in environment json-file"  }
     if (!$Environment.vmwareResourcePool) { throw "Clone task failed. VMware Resource Pool is not defined in config json-file" }
@@ -71,7 +71,7 @@ task createCloneTask {
     }
 }
 ### Validate sstatus of Clone Task and Power State of VM
-task checkCloneTask {
+task cloneTaskStatus {
     foreach ($Clone in $CloneArray) {
         while ($true) {
             $validateTask = (Get-CohesityRestoreTask -Id $Clone.Id).Status
@@ -91,7 +91,7 @@ task checkCloneTask {
 }
 
 ### Check the status of VMware Tools in Cloned VMs
-task checkVmwareTools {
+task vmwareToolsStatus {
     foreach ($Clone in $CloneArray) {
         while ($true) {
             $toolStatus = (Get-VM -Name $Clone.Name).ExtensionData.Guest.ToolsRunningStatus
@@ -106,7 +106,7 @@ task checkVmwareTools {
     }
 }
 
-task checkPSScriptExecution {
+task vmScriptTest {
     $i = 0
     foreach ($Clone in $CloneArray) {
         $vmCredentials = Import-Clixml -Path ($Config.virtualMachines[$i].guestCred)
@@ -139,7 +139,7 @@ task checkPSScriptExecution {
             } catch { }
             
             $loopCount++
-            Sleep -Seconds 5
+            Start-Sleep 5
             
             if ($LoopCount -gt 5) {
                 Write-Host "Could not execute script on $($Clone.Name), failing tests!" -ForegroundColor Red
@@ -158,7 +158,7 @@ task configVMNetwork {
         $network  = $Config.virtualMachines[$i].testNetwork
         $results = Get-VM $Clone.Name | Select-Object -first 1 | New-NetworkAdapter -NetworkName $Config.virtualMachines[$i].testNetwork -StartConnected:$true
         Write-Host "Virtual machine $($Clone.name) attached to network $network. Waiting 30 seconds before next step!" -ForegroundColor Yellow
-        Sleep -Seconds 30
+        Start-Sleep 30
         $i++
     }
 }
@@ -201,7 +201,7 @@ task configVMNetworkIP {
 }
 
 ### Run backup validation tests defined in configuration json per VM
-task validationTests {
+task doValidationTests {
     $i = 0
     foreach ($Clone in $CloneArray) {
         Write-Host "$($Clone.Name): Running tests $($Config.virtualMachines[$i].tasks)" -ForegroundColor Yellow
@@ -231,17 +231,17 @@ connectCohesity,
 connectVMware
 
 task 3_Clone `
-createCloneTask,
-checkCloneTask,
-checkVmwareTools,
-checkPSScriptExecution
+startCloneTask,
+cloneTaskStatus,
+vmwareToolsStatus,
+vmScriptTest
 
 task 4_VMNetwork `
 configVMNetwork,
 configVMNetworkIP
 
 task 5_Testing `
-validationTests
+doValidationTests
 
 task . `
 1_Init,
