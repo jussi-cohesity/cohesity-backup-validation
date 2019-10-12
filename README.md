@@ -12,9 +12,9 @@ With this example you can easily run testing for single VM or even against very 
 * [InvokeBuild](https://www.powershellgallery.com/packages/InvokeBuild/)
 
 
-# Installation
+# Known limitations
 
-Content of this folder can be downloaded to computer with network connectivity Cohesity and vCenter.
+This validation toolkit uses VMware PowerShell so only applications running in top of VMware are supported. Windows guests need to have PowerShell installed. Only supported quest OS's are Linux and Windows.
 
 ## Configuration
 
