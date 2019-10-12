@@ -16,6 +16,8 @@ With this example you can easily run testing for single VM or even against very 
 
 This validation toolkit uses VMware PowerShell so only applications running in top of VMware are supported. Windows guests need to have PowerShell installed. Only supported quest OS's are Linux and Windows.
 
+# How to start using this?
+
 ## Configuration
 
 Configuration contains three files: environment.json, config.json and identity xml files for authentication.
