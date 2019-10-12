@@ -133,8 +133,7 @@ task vmScriptTest {
             }
 
             try {
-                $results = Invoke-VMScript @vmscript -ErrorAction Stop
-                Write-Host "checkPSScriptExecution status $results" -ForegroundColor Yellow
+                Invoke-VMScript @vmscript -ErrorAction Stop
                 break
             } catch { }
             
