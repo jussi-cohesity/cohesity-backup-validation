@@ -54,7 +54,7 @@ task startCloneTask {
         throw "Couldnt find Protection Source $($Environment.vmwareServer). Failing tests. Please check!"
     }
 
-    [Array]$Script:CloneArray = $null
+    [Array]$Script:clones = $null
     foreach ($VM in $Config.virtualMachines) {  
         if (!$VM.backupJobName) { throw "Clone task failed. Bckupjob is not defined for VM $($VM.name)" }
         ### if multiple objects found with same object name, use first
@@ -67,21 +67,21 @@ task startCloneTask {
         }
         $cloneTask = Copy-CohesityVMwareVM -TaskName $taskName -PoweredOn:$true -DisableNetwork:$false -Jobid $($backupJob.JobId) -SourceId $($cloneVM.id) -TargetViewName $taskName -VmNamePrefix "$($VM.vmNamePrefix)" -ResourcePoolId $($vmwareResourcePool.id) -NewParent $($vmwareSource.Id)
         Write-Host "Created cloneTask $($cloneTask.Id) for VM $($VM.name)" -ForegroundColor Yellow
-        $Script:CloneArray += $cloneTask
+        $Script:clones += $cloneTask
     }
 }
-### Validate sstatus of Clone Task and Power State of VM
+### Validate status of Clone Task and Power State of VM
 task cloneTaskStatus {
-    foreach ($Clone in $CloneArray) {
+    foreach ($clone in $clones) {
         while ($true) {
-            $validateTask = (Get-CohesityRestoreTask -Id $Clone.Id).Status
-            $validatePowerOn = (Get-VM -Name $Clone.Name -ErrorAction:SilentlyContinue).PowerState
+            $validateTask = (Get-CohesityRestoreTask -Id $clone.Id).Status
+            $validatePowerOn = (Get-VM -Name $clone.Name -ErrorAction:SilentlyContinue).PowerState
             Start-Sleep 10
-            Write-Host "$($Clone.Name) clone status is $validateTask and Power Status is $ValidatePowerOn" -ForegroundColor Yellow
+            Write-Host "$($clone.Name) clone status is $validateTask and Power Status is $ValidatePowerOn" -ForegroundColor Yellow
             if ($validateTask -eq 'kFinished' -and $validatePowerOn -eq 'PoweredOn') {
                 break
             } elseif ($sleepCount -gt '20') {
-                throw "Clone of VM $($Clone.Name) failed. Failing tests. Other cloned VMs remain cloned status, manual cleanup might needed!"
+                throw "Clone of VM $($clone.Name) failed. Failing tests. Other cloned VMs remain cloned status, manual cleanup might needed!"
             } else {
                 Start-Sleep 15
                 $sleepCount++
@@ -92,11 +92,11 @@ task cloneTaskStatus {
 
 ### Check the status of VMware Tools in Cloned VMs
 task vmwareToolsStatus {
-    foreach ($Clone in $CloneArray) {
+    foreach ($clone in $clones) {
         while ($true) {
-            $toolStatus = (Get-VM -Name $Clone.Name).ExtensionData.Guest.ToolsRunningStatus
+            $toolStatus = (Get-VM -Name $clone.Name).ExtensionData.Guest.ToolsRunningStatus
             
-            Write-Host "VM $($Clone.Name) VMware Tools Status is $toolStatus" -ForegroundColor Yellow
+            Write-Host "VM $($clone.Name) VMware Tools Status is $toolStatus" -ForegroundColor Yellow
             if ($toolStatus -ne 'guestToolsRunning') {
                 Start-Sleep 15
             } else {
@@ -108,17 +108,17 @@ task vmwareToolsStatus {
 
 task vmScriptTest {
     $i = 0
-    foreach ($Clone in $CloneArray) {
+    foreach ($clone in $clones) {
         $vmCredentials = Import-Clixml -Path ($Config.virtualMachines[$i].guestCred)
         $loopCount = 1
         while ($true) {
-            Write-Host "Run try ($loopCount)/5: Script test on $($Clone.name)" -ForegroundColor Yellow
+            Write-Host "Run try ($loopCount)/5: Script test on $($clone.name)" -ForegroundColor Yellow
 
             if ($Config.virtualMachines[$i].guestOS -eq 'Windows') {
                 $vmscript = @{
                     ScriptText      = 'hostname'
                     ScriptType      = 'PowerShell'
-                    VM              = $Clone.name
+                    VM              = $clone.name
                     GuestCredential = $vmCredentials
                 }
             }
@@ -127,7 +127,7 @@ task vmScriptTest {
                 $vmscript = @{
                     ScriptText      = 'hostname'
                     ScriptType      = 'bash'
-                    VM              = $Clone.name
+                    VM              = $clone.name
                     GuestCredential = $vmCredentials
                 }
             }
@@ -141,7 +141,7 @@ task vmScriptTest {
             Start-Sleep 5
             
             if ($LoopCount -gt 5) {
-                Write-Host "Could not execute script on $($Clone.Name), failing tests!" -ForegroundColor Red
+                Write-Host "Could not execute script on $($clone.Name), failing tests!" -ForegroundColor Red
                 Exit
             }
         }
@@ -153,10 +153,10 @@ task vmScriptTest {
 ### Config network for cloned VMs
 task configVMNetwork {
     $i = 0
-    foreach ($Clone in $CloneArray) {
+    foreach ($clone in $clones) {
         $network  = $Config.virtualMachines[$i].testNetwork
-        $results = Get-VM $Clone.Name | Select-Object -first 1 | New-NetworkAdapter -NetworkName $Config.virtualMachines[$i].testNetwork -StartConnected:$true
-        Write-Host "Virtual machine $($Clone.name) attached to network $network. Waiting 30 seconds before next step!" -ForegroundColor Yellow
+        $results = Get-VM $clone.Name | Select-Object -first 1 | New-NetworkAdapter -NetworkName $Config.virtualMachines[$i].testNetwork -StartConnected:$true
+        Write-Host "Virtual machine $($clone.name) attached to network $network. Waiting 30 seconds before next step!" -ForegroundColor Yellow
         Start-Sleep 30
         $i++
     }
@@ -165,12 +165,12 @@ task configVMNetwork {
 ### Change VM network IPs to test IPs
 task configVMNetworkIP {
     $i = 0
-    foreach ($Clone in $CloneArray) {
-        Write-Host "$($Clone.Name): Importing credential file $($Config.virtualMachines[$i].guestCred))" -ForegroundColor Yellow
+    foreach ($clone in $clones) {
+        Write-Host "$($clone.Name): Importing credential file $($Config.virtualMachines[$i].guestCred))" -ForegroundColor Yellow
         $vmCredentials = Import-Clixml -Path ($Config.virtualMachines[$i].guestCred)
 
         if ($Config.virtualMachines[$i].guestOS -eq 'Windows') {
-            $TestInterfaceMAC = ((Get-NetworkAdapter -VM $($Clone.Name) | Select-Object -first 1).MacAddress).ToLower() -replace ":","-"
+            $TestInterfaceMAC = ((Get-NetworkAdapter -VM $($clone.Name) | Select-Object -first 1).MacAddress).ToLower() -replace ":","-"
             $run = @{
                 ScriptText      = 'Get-NetAdapter | where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue;`
                                 Get-NetAdapter | where {($_.MacAddress).ToLower() -eq "' + $TestInterfaceMAC + '"} | Get-NetIPAddress | Remove-NetIPAddress -confirm:$false;`
@@ -178,7 +178,7 @@ task configVMNetworkIP {
                                 New-NetIPAddress -IPAddress ' + $Config.virtualMachines[$i].testIp + ' -PrefixLength ' + $Config.virtualMachines[$i].testSubnet + `
                                 ' -DefaultGateway ' + $Config.virtualMachines[$i].testGateway
                 ScriptType      = 'PowerShell'
-                VM              = $Clone.Name
+                VM              = $clone.Name
                 GuestCredential = $vmCredentials
             }
          
@@ -186,11 +186,11 @@ task configVMNetworkIP {
             $run = @{
                 ScriptText      = 'ifconfig "' + $($Config.virtualMachines[$i].linuxNetDev) + '" "' + $($Config.virtualMachines[$i].testIp) + '"/"' + $($Config.virtualMachines[$i].testSubnet) + '" up && route add default gw "' + $Config.virtualMachines[$i].testGateway + '" ' 
                 ScriptType      = 'bash'
-                VM              = $Clone.Name
+                VM              = $clone.Name
                 GuestCredential = $vmCredentials
             } 
         } else { 
-            Write-Host "$($Clone.Name): Network IP change to $($Config.virtualMachines[$i].testIp) failed. GuestOS $($Config.virtualMachines[$i].guestOS) is not supported (Windows/Linux). Cloned VMs remain cloned status, manual cleanup might needed!" -ForegroundColor Red
+            Write-Host "$($clone.Name): Network IP change to $($Config.virtualMachines[$i].testIp) failed. GuestOS $($Config.virtualMachines[$i].guestOS) is not supported (Windows/Linux). Cloned VMs remain cloned status, manual cleanup might needed!" -ForegroundColor Red
             exit
         }
 
@@ -202,23 +202,23 @@ task configVMNetworkIP {
 ### Run backup validation tests defined in configuration json per VM
 task doValidationTests {
     $i = 0
-    foreach ($Clone in $CloneArray) {
-        Write-Host "$($Clone.Name): Running tests $($Config.virtualMachines[$i].tasks)" -ForegroundColor Yellow
+    foreach ($clone in $clones) {
+        Write-Host "$($clone.Name): Running tests $($Config.virtualMachines[$i].tasks)" -ForegroundColor Yellow
         $vmCredentials = Import-Clixml -Path ($Config.virtualMachines[$i].guestCred)
         Invoke-Build -File .\validationTests.ps1 -Task $Config.virtualMachines[$i].tasks -Config $Config.virtualMachines[$i] -vmCredentials $vmCredentials -vmName $($Clone.Name)
-        Write-Host "$($Clone.Name): Testing complete" -ForegroundColor Yellow
+        Write-Host "$($clone.Name): Testing complete" -ForegroundColor Yellow
         $i++
     }
 }
 
 ### After testing remove clones
 task removeClones {
-    foreach ($Clone in $CloneArray) {
-        $removeRequest = Remove-CohesityClone -TaskId $Clone.id -Confirm:$false
-        Write-Host "$($Clone.Name): $removeRequest" -ForegroundColor Yellow
+    foreach ($clone in $clones) {
+        $removeRequest = Remove-CohesityClone -TaskId $clone.id -Confirm:$false
+        Write-Host "$($clone.Name): $removeRequest" -ForegroundColor Yellow
 
-        $removeView = Remove-CohesityView -Name $Clone.name -Confirm:$false
-        Write-Host "Removing view $($Clone.name)" -ForegroundColor Yellow
+        $removeView = Remove-CohesityView -Name $clone.name -Confirm:$false
+        Write-Host "Removing view $($clone.name)" -ForegroundColor Yellow
     }
 }
 
