@@ -222,30 +222,30 @@ task removeClones {
     }
 }
 
-task 1_Init `
+task 1_OpenConnection `
 getConfig
-
-task 2_Connect `
 connectCohesity,
 connectVMware
 
-task 3_Clone `
+task 2_CloneVMs `
 startCloneTask,
 cloneTaskStatus,
 vmwareToolsStatus,
 vmScriptTest
 
-task 4_VMNetwork `
+task 3_ChangeVMNetwork `
 configVMNetwork,
 configVMNetworkIP
 
-task 5_Testing `
+task 4_DoTesting `
 doValidationTests
 
-task . `
-1_Init,
-2_Connect,
-3_Clone,
-4_VMNetwork,
-5_Testing,
+task 5_Cleanup `
 removeClones
+
+task . `
+1_OpenConnection,
+2_CloneCMs,
+3_ChangeVMNetwork,
+4_DoTesting,
+5_Cleanup
