@@ -203,9 +203,9 @@ task configVMNetworkIP {
 task doValidationTests {
     $i = 0
     foreach ($clone in $clones) {
-        Write-Host "$($clone.Name): Running tests $($Config.virtualMachines[$i].tasks)" -ForegroundColor Yellow
+        Write-Host "$($clone.Name): Running tests $($Config.virtualMachines[$i].tests)" -ForegroundColor Yellow
         $vmCredentials = Import-Clixml -Path ($Config.virtualMachines[$i].guestCred)
-        Invoke-Build -File .\validationTests.ps1 -Task $Config.virtualMachines[$i].tasks -Config $Config.virtualMachines[$i] -vmCredentials $vmCredentials -vmName $($Clone.Name)
+        Invoke-Build -File .\validationTests.ps1 -Tests $Config.virtualMachines[$i].tests -Config $Config.virtualMachines[$i] -vmCredentials $vmCredentials -vmName $($Clone.Name)
         Write-Host "$($clone.Name): Testing complete" -ForegroundColor Yellow
         $i++
     }
