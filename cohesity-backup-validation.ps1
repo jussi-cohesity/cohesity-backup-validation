@@ -3,7 +3,7 @@
 ###
 
 $testrun = @{
-    File            = 'testbuilder.ps1'
+    File            = 'validation-toolkit.ps1'
     EnvironmentFile = 'environment.json'
     ConfigFile      = 'config.json'
     }
